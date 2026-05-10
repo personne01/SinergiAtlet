@@ -1,0 +1,13 @@
+{
+  "name": "SinergiAtlet",
+  "description": "Marketplace SDM Olahraga & Career Path Atlet. Temukan peluang karir, bangun portofolio digital, dan validasi skill dengan AI (KYS).",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "Talent Marketplace",
+    "Athlete Career Roadmap",
+    "AI Skill Verification (KYS)",
+    "Digital Portfolio"
+  ]
+}
