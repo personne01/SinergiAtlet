@@ -1,0 +1,149 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User account registration and status informational record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique user ID" },
+        "email": { "type": "string", "description": "Email address" },
+        "role": { "type": "string", "enum": ["admin", "klub", "pencari_bakat", "talent"] },
+        "status": { "type": "string", "enum": ["active", "pending", "suspended"] },
+        "full_name": { "type": "string", "description": "Full name of the user" },
+        "avatar_url": { "type": "string", "description": "URL of profile photo" },
+        "approved_by": { "type": "string", "description": "Admin user ID who approved" },
+        "approved_at": { "type": "string", "description": "ISO timestamp of approval" },
+        "created_at": { "type": "string", "description": "ISO timestamp of creation" }
+      },
+      "required": ["id", "email", "role", "status", "full_name", "created_at"]
+    },
+    "Profile": {
+      "title": "Profile",
+      "description": "Detailed profile information of a user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Profile ID" },
+        "user_id": { "type": "string", "description": "User ID reference" },
+        "org_id": { "type": "string", "description": "Organization ID reference" },
+        "phone": { "type": "string" },
+        "date_of_birth": { "type": "string" },
+        "gender": { "type": "string" },
+        "sport_type": { "type": "string" },
+        "position": { "type": "string" },
+        "bio": { "type": "string" }
+      },
+      "required": ["id", "user_id"]
+    },
+    "Organization": {
+      "title": "Organization",
+      "description": "Club, academy, or training center organization record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "type": { "type": "string", "enum": ["club", "academy", "training_center"] },
+        "logo_url": { "type": "string" },
+        "location": { "type": "string" },
+        "description": { "type": "string" },
+        "verified": { "type": "boolean" }
+      },
+      "required": ["id", "name", "slug", "type", "verified"]
+    },
+    "Job": {
+      "title": "Job",
+      "description": "Scouting and recruitments opportunities postings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "org_id": { "type": "string" },
+        "type": { "type": "string" },
+        "location": { "type": "string" },
+        "description": { "type": "string" },
+        "min_kys_requirements": { "type": "object" },
+        "status": { "type": "string", "enum": ["open", "closed", "expired"] },
+        "salary_range": { "type": "string" },
+        "deadline": { "type": "string" },
+        "created_at": { "type": "string" },
+        "sport_id": { "type": "string", "description": "Sport ID for filtering" }
+      },
+      "required": ["id", "title", "org_id", "type", "status", "created_at"]
+    },
+    "CareerProgress": {
+      "title": "CareerProgress",
+      "description": "Athlete leveling and progression tracking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "athlete_id": { "type": "string" },
+        "current_level": { "type": "integer" },
+        "total_exp": { "type": "integer" },
+        "milestones_reached": { "type": "array" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["id", "athlete_id", "current_level", "total_exp", "milestones_reached", "updated_at"]
+    },
+    "KYSRecord": {
+      "title": "KYSRecord",
+      "description": "Verified biometric/skill tests scores from camera/videos",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "athlete_id": { "type": "string" },
+        "verified_score": { "type": "number" },
+        "score_type": { "type": "string", "enum": ["speed", "stamina", "agility"] },
+        "audit_hash": { "type": "string" },
+        "session_metadata": { "type": "object" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "athlete_id", "verified_score", "score_type", "audit_hash", "created_at"]
+    },
+    "SportAssessment": {
+      "title": "SportAssessment",
+      "description": "High level sport technical assessments",
+      "type": "object",
+      "properties": {
+        "athlete_id": { "type": "string" },
+        "sport_id": { "type": "string" },
+        "level_id": { "type": "string" },
+        "composite_score": { "type": "number" },
+        "dimension_scores": { "type": "array" },
+        "status": { "type": "string" },
+        "completed_at": { "type": "string" },
+        "valid_until": { "type": "string" }
+      },
+      "required": ["athlete_id", "sport_id", "level_id", "composite_score", "dimension_scores", "status", "completed_at", "valid_until"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User table mapped to individual documents"
+    },
+    "/profiles/{profileId}": {
+      "schema": { "$ref": "#/entities/Profile" },
+      "description": "User profiles"
+    },
+    "/organizations/{orgId}": {
+      "schema": { "$ref": "#/entities/Organization" },
+      "description": "Management organizations/clubs"
+    },
+    "/jobs/{jobId}": {
+      "schema": { "$ref": "#/entities/Job" },
+      "description": "Job/scouting listings"
+    },
+    "/career_progress/{progressId}": {
+      "schema": { "$ref": "#/entities/CareerProgress" },
+      "description": "Career mapping for talent progress"
+    },
+    "/kys_vault/{recordId}": {
+      "schema": { "$ref": "#/entities/KYSRecord" },
+      "description": "Verified sports records"
+    },
+    "/sport_assessments/{assessmentId}": {
+      "schema": { "$ref": "#/entities/SportAssessment" },
+      "description": "Sport competency assessments"
+    }
+  }
+}

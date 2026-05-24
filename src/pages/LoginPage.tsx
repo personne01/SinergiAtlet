@@ -1,13 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Trophy, LogIn, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginPage() {
   const { login, isAuthenticated, user } = useAuth();
-  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -19,8 +18,7 @@ export default function LoginPage() {
     const target = user.role === 'admin' ? '/admin/users'
       : user.role === 'klub' || user.role === 'pencari_bakat' ? '/club/dashboard'
       : '/market';
-    navigate(target, { replace: true });
-    return null;
+    return <Navigate to={target} replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

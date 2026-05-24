@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Trophy, UserPlus, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,8 +16,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
 
   if (isAuthenticated && user) {
-    navigate('/market', { replace: true });
-    return null;
+    return <Navigate to="/market" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

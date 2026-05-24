@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Cpu } from 'lucide-react';
 
 interface AIAnalysisAnimationProps {
@@ -9,53 +9,74 @@ interface AIAnalysisAnimationProps {
   totalFrames: number;
 }
 
+const KINETIC_PHASES = [
+  "Mengekstrak 33 titik sendi (MediaPipe AI)...",
+  "Membangun lintasan motion path...",
+  "Menghitung percepatan dan kecepatan (kinematika)...",
+  "Membandingkan efisiensi sudut sendi dengan model pro...",
+  "Menghasilkan rekomendasi pelatihan..."
+];
+
 export default function AIAnalysisAnimation({ progress, status, frameCount, totalFrames }: AIAnalysisAnimationProps) {
-  const [dotCount, setDotCount] = useState(0);
+  const [phaseIndex, setPhaseIndex] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => setDotCount((c) => (c + 1) % 4), 400);
+    const interval = setInterval(() => {
+      setPhaseIndex(prev => (prev + 1) % KINETIC_PHASES.length);
+    }, 2500); // cycle phases every 2.5s
     return () => clearInterval(interval);
   }, []);
 
-  const dots = '.'.repeat(dotCount);
-
   return (
-    <div className="bg-[#111111] border border-[#D1FF00]/20 rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center">
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-        className="w-12 h-12 sm:w-16 sm:h-16 bg-[#D1FF00]/10 rounded-2xl border border-[#D1FF00]/20 flex items-center justify-center mx-auto mb-4"
-      >
-        <Cpu className="w-6 h-6 sm:w-8 sm:h-8 text-[#D1FF00]" />
-      </motion.div>
-
-      <h3 className="text-sm sm:text-base font-bold text-white mb-1">AI Menganalisis Gerakan{dots}</h3>
-      <p className="text-[9px] sm:text-[10px] text-white/40 mb-4">{status}</p>
-
-      <div className="max-w-xs mx-auto space-y-3">
-        <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-          <motion.div
-            className="h-full bg-[#D1FF00] rounded-full"
-            style={{ width: `${progress}%` }}
-            transition={{ duration: 0.3 }}
-          />
-        </div>
-        <div className="flex justify-between text-[8px] sm:text-[9px] font-mono text-white/30">
-          <span>Frame {frameCount}/{totalFrames}</span>
-          <span>{progress}%</span>
-        </div>
+    <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center p-8 text-center space-y-6 z-50">
+      <div className="relative flex items-center justify-center">
+        {/* Glowing spin ring */}
+        <div className="absolute w-24 h-24 border-4 border-white/5 rounded-full" />
+        <div className="absolute w-24 h-24 border-4 border-transparent border-t-[#D1FF00] border-r-[#D1FF00]/50 rounded-full animate-spin shadow-[0_0_15px_rgba(209,255,0,0.4)]" />
+        {/* Core icon */}
+        <motion.div animate={{ scale: [0.9, 1.1, 0.9] }} transition={{ duration: 2, repeat: Infinity }}>
+           <Cpu className="w-8 h-8 text-[#D1FF00]" />
+        </motion.div>
       </div>
 
-      <div className="mt-4 flex justify-center gap-1">
-        {Array.from({ length: Math.min(frameCount, 8) }).map((_, i) => (
-          <motion.div
-            key={i}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 0.6 }}
-            transition={{ delay: i * 0.15 }}
-            className="w-2 h-2 rounded-full bg-[#D1FF00]"
-          />
-        ))}
+      <div className="max-w-xs w-full space-y-5">
+        <div>
+          <h3 className="text-[#D1FF00] font-black tracking-widest uppercase mb-2 text-sm">Memproses Kinetika</h3>
+          <div className="h-4 relative overflow-hidden">
+             <AnimatePresence mode="wait">
+               <motion.p
+                  key={phaseIndex}
+                  initial={{ y: 15, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -15, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="text-white/40 text-[10px] md:text-xs absolute inset-0"
+               >
+                 {KINETIC_PHASES[phaseIndex]}
+               </motion.p>
+             </AnimatePresence>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex justify-between text-[10px] font-mono font-bold tracking-widest">
+            <span className="text-[#D1FF00]">{Math.round(progress)}%</span>
+            <span className="text-white/30">FRAME {frameCount}/{totalFrames}</span>
+          </div>
+          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-gradient-to-r from-[#D1FF00]/50 to-[#D1FF00]"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ ease: "linear", duration: 0.2 }}
+            />
+          </div>
+        </div>
+        
+        {/* Custom generic status (for internal worker messages if needed) */}
+        {status && !status.includes('Siap') && (
+            <p className="text-[8px] text-white/20 font-mono italic">{status}</p>
+        )}
       </div>
     </div>
   );

@@ -13,7 +13,6 @@ export const JOBS: Job[] = [
     isKYSRequired: true,
     featured: true,
     sportId: 'sepak_bola',
-    levelId: 'sb_u19',
     skillRequirements: [
       { dimensionId: 'sb_agility', dimensionName: 'Kelincahan', minScore: 85, checklist: [
         { itemId: 'sb_agility_ttest', label: 'T-Test', minValue: 10.0, weight: 1.0 },
@@ -45,7 +44,6 @@ export const JOBS: Job[] = [
     criteriaValue: 90,
     isKYSRequired: true,
     sportId: 'sepak_bola',
-    levelId: 'sb_u17',
     skillRequirements: [
       { dimensionId: 'sb_stamina', dimensionName: 'Daya Tahan', minScore: 90, checklist: [
         { itemId: 'sb_stamina_yoyo', label: 'Yo-Yo Test IR1', minValue: 16, weight: 1.0 },
@@ -99,7 +97,6 @@ export const JOBS: Job[] = [
     criteriaValue: 80,
     isKYSRequired: true,
     sportId: 'bulutangkis',
-    levelId: 'bt_u17',
     skillRequirements: [
       { dimensionId: 'bt_speed', dimensionName: 'Kecepatan', minScore: 80, checklist: [
         { itemId: 'bt_speed_6point', label: '6-Point Footwork', minValue: 19.0, weight: 1.0 },
@@ -121,7 +118,6 @@ export const JOBS: Job[] = [
     criteriaValue: 82,
     isKYSRequired: true,
     sportId: 'sepak_bola',
-    levelId: 'sb_u19',
     skillRequirements: [
       { dimensionId: 'sb_technique', dimensionName: 'Teknik', minScore: 80, checklist: [
         { itemId: 'sb_tech_passing', label: 'Passing Accuracy', minValue: 75, weight: 1.0 },
@@ -360,7 +356,6 @@ export const SPORT_ASSESSMENTS: SportAssessment[] = [
   {
     id: 'sa1',
     sportId: 'sepak_bola',
-    levelId: 'sb_u19',
     status: 'completed',
     compositeScore: 82,
     completedAt: '10 Mei 2026',
@@ -407,7 +402,6 @@ export const SPORT_ASSESSMENTS: SportAssessment[] = [
   {
     id: 'sa2',
     sportId: 'bulutangkis',
-    levelId: 'bt_u17',
     status: 'completed',
     compositeScore: 78,
     completedAt: '12 Mei 2026',
@@ -454,7 +448,6 @@ export const SPORT_ASSESSMENTS: SportAssessment[] = [
   {
     id: 'sa3',
     sportId: 'taekwondo',
-    levelId: 'tk_u17',
     status: 'not_started',
     compositeScore: 0,
     dimensionScores: [],

@@ -11,7 +11,6 @@ export interface Job {
   isKYSRequired: boolean;
   featured?: boolean;
   sportId?: string;
-  levelId?: string;
   skillRequirements?: JobSkillRequirement[];
 }
 
@@ -20,7 +19,6 @@ export interface JobFilter {
   kysOnly: boolean | null;
   location: string;
   sportId?: string;
-  levelId?: string;
 }
 
 export interface CareerLevel {
@@ -73,15 +71,6 @@ export interface SportDef {
   icon: string;
   description: string;
   color: string;
-  levels: SportLevel[];
-}
-
-export interface SportLevel {
-  id: string;
-  label: string;
-  description: string;
-  minAge?: number;
-  maxAge?: number;
   dimensions: SkillDimensionDef[];
 }
 
@@ -122,7 +111,6 @@ export interface JobChecklistRequirement {
 export interface SportAssessment {
   id: string;
   sportId: string;
-  levelId: string;
   status: 'not_started' | 'in_progress' | 'completed';
   dimensionScores: DimensionScore[];
   compositeScore: number;
@@ -170,6 +158,25 @@ export interface LoginResponse {
 }
 
 /* ── MediaPipe / Video Analysis Types ── */
+
+export interface MechanicConfig {
+  type: 'SPEED' | 'ACCELERATION' | 'CG_STABILITY' | 'SYMMETRY' | 'KNEE_FLEXION' | 'EXPLOSIVENESS' | 'HIP_ROTATION' | 'BALANCE' | 'REACTION_TIME';
+  weight: number;
+  thresholdVelocity?: number;
+  maxDeviationX?: number;
+  varianceThreshold?: number;
+  minAngle?: number;
+  maxAngle?: number;
+  peakAcceleration?: number;
+  minRotationAngle?: number;
+  maxDelayMs?: number;
+}
+
+export interface DrillConfig {
+  id: string;
+  mechanics: MechanicConfig[];
+  durationMs: number;
+}
 
 export interface LandmarkPoint {
   x: number;

@@ -12,7 +12,6 @@ type FormData = {
   type: string;
   location: string;
   sportId: string;
-  levelId: string;
   description: string;
 };
 
@@ -23,7 +22,6 @@ const INITIAL_FORM: FormData = {
   type: 'Kontrak',
   location: '',
   sportId: '',
-  levelId: '',
   description: '',
 };
 
@@ -37,7 +35,6 @@ export default function ClubPostPage() {
   const [customItems, setCustomItems] = useState<Record<string, SkillCheckItemDef[]>>({});
 
   const selectedSport = SPORTS.find((s) => s.id === form.sportId);
-  const selectedLevel = selectedSport?.levels.find((l) => l.id === form.levelId);
 
   const handleDimensionMinScore = (dimId: string, val: number) => {
     setMinScores((prev) => ({ ...prev, [dimId]: val }));
@@ -84,8 +81,8 @@ export default function ClubPostPage() {
   };
 
   const skillRequirements = useMemo((): JobSkillRequirement[] => {
-    if (!selectedLevel) return [];
-    return selectedLevel.dimensions.map((dim) => {
+    if (!selectedSport) return [];
+    return selectedSport.dimensions.map((dim) => {
       const reqChecklist: JobChecklistRequirement[] = [];
       for (const item of dim.items) {
         const cr = checklistReqs[dim.id]?.[item.id];
@@ -106,7 +103,7 @@ export default function ClubPostPage() {
         checklist: reqChecklist,
       };
     }).filter((r) => r.checklist.length > 0);
-  }, [selectedLevel, minScores, checklistReqs, customItems]);
+  }, [selectedSport, minScores, checklistReqs, customItems]);
 
   const handlePost = () => {
     const posting = {
@@ -120,7 +117,7 @@ export default function ClubPostPage() {
   };
 
   const canProceed = () => {
-    if (step === 0) return form.title && form.organization && form.sportId && form.levelId;
+    if (step === 0) return form.title && form.organization && form.sportId;
     if (step === 1) return skillRequirements.length > 0;
     return true;
   };
@@ -197,18 +194,10 @@ export default function ClubPostPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div>
                 <label className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-white/40 mb-2 block">Olahraga</label>
-                <select value={form.sportId} onChange={(e) => { setForm({ ...form, sportId: e.target.value, levelId: '' }); setMinScores({}); setChecklistReqs({}); }}
+                <select value={form.sportId} onChange={(e) => { setForm({ ...form, sportId: e.target.value }); setMinScores({}); setChecklistReqs({}); }}
                   className="w-full bg-white/5 border border-white/10 py-3 sm:py-3.5 px-4 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs focus:outline-none focus:border-[#D1FF00]/30 transition-colors appearance-none">
                   <option value="">Pilih olahraga...</option>
                   {SPORTS.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-white/40 mb-2 block">Level</label>
-                <select value={form.levelId} onChange={(e) => { setForm({ ...form, levelId: e.target.value }); setMinScores({}); setChecklistReqs({}); }}
-                  className="w-full bg-white/5 border border-white/10 py-3 sm:py-3.5 px-4 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs focus:outline-none focus:border-[#D1FF00]/30 transition-colors appearance-none" disabled={!form.sportId}>
-                  <option value="">Pilih level...</option>
-                  {selectedSport?.levels.map((l) => <option key={l.id} value={l.id}>{l.label} — {l.description}</option>)}
                 </select>
               </div>
             </div>

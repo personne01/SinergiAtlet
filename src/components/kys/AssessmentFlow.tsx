@@ -7,36 +7,24 @@ import { normalizeScore, computeDimensionScore } from '../../lib/scoring';
 interface AssessmentFlowProps {
   dimensions: SkillDimensionDef[];
   sportId: string;
-  levelId: string;
   mediapipeReady: boolean;
   onComplete: (assessment: SportAssessment) => void;
   onClose: () => void;
 }
 
 function buildDrillConfig(item: SkillCheckItemDef): VideoAnalysisConfig {
-  const drillTypeMap: Record<string, 'sprint' | 'agility' | 'technique' | 'power' | 'endurance'> = {
-    sprint40: 'sprint',
-    accel10: 'sprint',
-    ttest: 'agility',
-    zigzag: 'agility',
-    shadow: 'agility',
-    cod: 'agility',
-    combo: 'agility',
-    evasion: 'agility',
-    yoyo: 'endurance',
-    multi: 'endurance',
-    passing: 'technique',
-    dribbling: 'technique',
-    clear: 'technique',
-    dropshot: 'technique',
-    poomsae: 'technique',
-    sparring: 'technique',
-    kicking: 'power',
-    jump: 'power',
+  const itemKey = item.id.toLowerCase();
+  
+  const getDrillType = (): 'sprint' | 'agility' | 'technique' | 'power' | 'endurance' => {
+    if (itemKey.includes('speed') || itemKey.includes('sprint') || itemKey.includes('accel')) return 'sprint';
+    if (itemKey.includes('agility') || itemKey.includes('ttest') || itemKey.includes('zigzag') || itemKey.includes('shadow') || itemKey.includes('cod') || itemKey.includes('combo') || itemKey.includes('evasion') || itemKey.includes('reaction')) return 'agility';
+    if (itemKey.includes('stamina') || itemKey.includes('endurance') || itemKey.includes('yoyo') || itemKey.includes('vo2max') || itemKey.includes('multi')) return 'endurance';
+    if (itemKey.includes('power') || itemKey.includes('jump') || itemKey.includes('kicking') || itemKey.includes('smash') || itemKey.includes('height') || itemKey.includes('power')) return 'power';
+    if (itemKey.includes('technique') || itemKey.includes('passing') || itemKey.includes('dribbling') || itemKey.includes('clear') || itemKey.includes('dropshot') || itemKey.includes('poomsae') || itemKey.includes('sparring') || itemKey.includes('serve')) return 'technique';
+    return 'technique';
   };
 
-  const itemKey = item.id.split('_').pop() || '';
-  const drillType = drillTypeMap[itemKey] || 'sprint';
+  const drillType = getDrillType();
 
   return {
     drillType,
@@ -57,7 +45,6 @@ function buildDrillConfig(item: SkillCheckItemDef): VideoAnalysisConfig {
 export default function AssessmentFlow({
   dimensions,
   sportId,
-  levelId,
   mediapipeReady,
   onComplete,
   onClose,
@@ -76,7 +63,7 @@ export default function AssessmentFlow({
   }, []);
 
   const getConfig = useCallback((item: SkillCheckItemDef) => {
-    if (item.assessmentType !== 'ai_scan') return null;
+    if (!item || item.assessmentType !== 'ai_scan') return null;
     return buildDrillConfig(item);
   }, []);
 
@@ -160,6 +147,7 @@ export default function AssessmentFlow({
         <p className="text-[8px] sm:text-[9px] text-white/40 mb-4 sm:mb-6">{currentDim.description}</p>
 
         <VideoDrillCapture
+          key={currentDim.id}
           items={currentDim.items}
           getConfig={getConfig}
           mediapipeReady={mediapipeReady}

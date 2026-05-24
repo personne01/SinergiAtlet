@@ -17,19 +17,18 @@
 | **Animation** | Motion (Framer Motion) |
 | **Icons** | Lucide React |
 | **Backend** | Express 4 + TypeScript (tsx) |
-| **Database** | PostgreSQL (pg driver) |
+| **Database** | Firebase Firestore (NoSQL) |
 | **AI/ML** | MediaPipe Pose Landmarker (on-device, browser-based) |
-| **Auth** | bcryptjs + jsonwebtoken |
+| **Auth** | Firebase Auth (optional logic) / Custom JWT + Firestore |
 | **Testing** | Vitest + React Testing Library + jsdom |
 | **Linting** | ESLint 9 (flat config) + Prettier |
-| **Deployment** | Firebase Hosting (FE) + Cloud Run (BE) + Cloud SQL (DB) |
+| **Deployment** | Firebase Hosting (FE) + Cloud Run (BE) + Firestore (DB) |
 
 ---
 
 ## Prerequisites
 
 - **Node.js** >= 18
-- **PostgreSQL** >= 15
 
 ---
 
@@ -38,32 +37,28 @@
 ```bash
 # 1. Install dependencies
 npm install
-
-# 2. Copy environment variables
-cp .env.example .env
 ```
+
+Sistem database sekarang menggunakan **Firebase Firestore**. 
+Pastikan file `firebase-applet-config.json` sudah ada di root folder (di-generate via Firebase provisioning).
 
 Isi `.env`:
 ```
 GEMINI_API_KEY="your-gemini-api-key"
-DATABASE_URL="postgresql://user:password@localhost:5432/sinergi_atlet"
 JWT_SECRET="your-jwt-secret-change-in-production"
 ```
 
 ```bash
-# 3. Create database
-createdb sinergi_atlet
-
-# 4. Run database migrations
+# 2. Test Firebase Connection
 npm run migrate
 
-# 5. (Optional) Seed dummy data
+# 3. Seed initial data to Firestore
 npm run seed
 ```
 
 ---
 
-## Database Structure
+## Database Structure (Firestore Collections)
 
 ### Entity Relationship
 
@@ -80,15 +75,15 @@ organizations                    users
 jobs (org_id) → organizations
 ```
 
-### Tables
+### Collections
 
-| Table | Key Columns | Purpose |
+| Collection | Key Fields | Purpose |
 |-------|-------------|---------|
 | `organizations` | id, name, slug, type, location, verified | Klub, akademi, training center |
 | `users` | id, email, password_hash, role, status, full_name, approved_by | Semua user (4 role) |
 | `profiles` | id, user_id, org_id, sport_type, position, phone, bio | Data tambahan per user |
-| `jobs` | id, title, org_id, type, location, description, min_kys_requirements | Lowongan pekerjaan |
-| `sport_assessments` | id, athlete_id, sport_id, level_id, composite_score, dimension_scores (JSONB) | Hasil KYS assessment |
+| `jobs` | id, title, org_id, type, location, description, min_kys_requirements, sport_id | Lowongan pekerjaan |
+| `sport_assessments` | athlete_id, sport_id, composite_score, dimension_scores | Hasil KYS assessment |
 | `career_progress` | id, athlete_id, current_level, total_exp, milestones_reached | Progres karir talent |
 | `kys_vault` | id, athlete_id, verified_score, score_type, audit_hash | Riwayat score KYS |
 
@@ -205,9 +200,9 @@ sinergi-atlet/
 │   └── styles/               # globals.css
 │
 ├── server/                   # Backend (Express + TypeScript)
-│   ├── config/               # database.ts (pg Pool)
+│   ├── config/               # firebase.ts (Firebase init)
 │   ├── controllers/          # auth, jobs, kys, career controllers
-│   ├── db/                   # migrations/ + migrate.ts + seed.ts
+│   ├── db/                   # migrate.ts + seed.ts
 │   ├── middleware/            # auth (JWT), errorHandler, logger
 │   ├── routes/               # auth, jobs, kys, career routes
 │   ├── services/             # Business logic layer
@@ -234,7 +229,7 @@ Routes (routing only)
 
 ## KYS — AI Assessment Flow
 
-1. **Select Sport & Level** → pilih cabang olahraga
+1. **Select Sport** → pilih cabang olahraga
 2. **Select Drill** → pilih gerakan yang akan di-rekam
 3. **Record Video** → countdown 3-2-1 → rekam 15-30 detik via webcam
 4. **AI Analysis** → MediaPipe Pose Landmarker mengekstrak landmark tubuh di 1fps
@@ -267,4 +262,4 @@ Routes (routing only)
 
 - **Frontend:** Firebase Hosting
 - **Backend:** Google Cloud Run
-- **Database:** Cloud SQL (PostgreSQL)
+- **Database:** Firebase Firestore

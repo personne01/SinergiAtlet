@@ -1,109 +1,159 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import React from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import Navbar from './components/layout/Navbar';
-import BottomNav from './components/layout/BottomNav';
-import Sidebar from './components/layout/Sidebar';
-import SystemFooter from './components/layout/SystemFooter';
-import MarketPage from './pages/MarketPage';
-import CareerPage from './pages/CareerPage';
-import KYSPage from './pages/KYSPage';
+
+// Pages
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import MarketPage from './pages/MarketPage';
+import ApplyPage from './pages/ApplyPage';
+import CareerPage from './pages/CareerPage';
+import KYSPage from './pages/KYSPage';
 import ClubDashboardPage from './pages/ClubDashboardPage';
 import ClubPostPage from './pages/ClubPostPage';
-import ApplyPage from './pages/ApplyPage';
 import AdminUsersPage from './pages/AdminUsersPage';
+import ProfilePage from './pages/ProfilePage';
+import SettingsPage from './pages/SettingsPage';
+
+// Layout
+import Navbar from './components/layout/Navbar';
+import Sidebar from './components/layout/Sidebar';
+import BottomNav from './components/layout/BottomNav';
+import SystemFooter from './components/layout/SystemFooter';
+
+function RootRedirect() {
+  const { isAuthenticated, user } = useAuth();
+
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role === 'admin') {
+    return <Navigate to="/admin/users" replace />;
+  }
+
+  if (user.role === 'klub' || user.role === 'pencari_bakat') {
+    return <Navigate to="/club/dashboard" replace />;
+  }
+
+  return <Navigate to="/market" replace />;
+}
+
+function MainApp() {
+  const { isAuthenticated, user } = useAuth();
+  const location = useLocation();
+
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+  const showNavLayout = isAuthenticated && user && !isAuthPage;
+
+  return (
+    <div className="min-h-screen bg-[#050505] text-white selection:bg-[#D1FF00] selection:text-black">
+      {showNavLayout && (
+        <>
+          <Navbar />
+          <Sidebar />
+          {user.role === 'talent' && <BottomNav />}
+          <SystemFooter />
+        </>
+      )}
+
+      <main className={showNavLayout ? 'lg:pl-56 pt-4 px-4 sm:px-6 lg:px-8 pb-32 sm:pb-36' : ''}>
+        <Routes>
+          <Route path="/" element={<RootRedirect />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+
+          {/* Protected Pages */}
+          <Route
+            path="/market"
+            element={
+              <ProtectedRoute requiredRole={['talent', 'admin']}>
+                <MarketPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/apply/:id"
+            element={
+              <ProtectedRoute requiredRole={['talent']}>
+                <ApplyPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/career"
+            element={
+              <ProtectedRoute requiredRole={['talent']}>
+                <CareerPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/kys"
+            element={
+              <ProtectedRoute requiredRole={['talent', 'admin']}>
+                <KYSPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Club Protected Pages */}
+          <Route
+            path="/club/dashboard"
+            element={
+              <ProtectedRoute requiredRole={['klub', 'pencari_bakat']}>
+                <ClubDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/club/post"
+            element={
+              <ProtectedRoute requiredRole={['klub', 'pencari_bakat']}>
+                <ClubPostPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin Protected Pages */}
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute requiredRole={['admin']}>
+                <AdminUsersPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Fallback */}
+          <Route path="*" element={<RootRedirect />} />
+        </Routes>
+      </main>
+    </div>
+  );
+}
 
 export default function App() {
   return (
     <AuthProvider>
-      <Routes>
-        {/* Public routes */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/club-login" element={<Navigate to="/login" replace />} />
-
-        {/* Protected club routes (standalone layout) */}
-        <Route
-          path="/club/dashboard"
-          element={
-            <ProtectedRoute requiredRole={['klub', 'pencari_bakat', 'admin']}>
-              <ClubDashboardPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/club/post"
-          element={
-            <ProtectedRoute requiredRole={['klub', 'pencari_bakat', 'admin']}>
-              <ClubPostPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Protected admin routes (standalone layout) */}
-        <Route
-          path="/admin/users"
-          element={
-            <ProtectedRoute requiredRole={['admin']}>
-              <AdminUsersPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Main app with layout */}
-        <Route path="*" element={<MainApp />} />
-      </Routes>
+      <MainApp />
     </AuthProvider>
-  );
-}
-
-function MainApp() {
-  return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans lg:pl-56">
-      <Sidebar />
-
-      <div className="sm:max-w-lg md:max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto sm:border-x border-white/10 relative min-h-screen pb-32">
-        <Navbar />
-        <main className="p-4 sm:p-6 lg:p-8">
-          <Routes>
-            <Route path="/market" element={<MarketPage />} />
-            <Route
-              path="/career"
-              element={
-                <ProtectedRoute requiredRole={['talent', 'admin']}>
-                  <CareerPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/kys"
-              element={
-                <ProtectedRoute requiredRole={['talent', 'admin']}>
-                  <KYSPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/apply/:jobId"
-              element={
-                <ProtectedRoute requiredRole={['talent', 'admin']}>
-                  <ApplyPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/profile" element={<Navigate to="/market" replace />} />
-            <Route path="/settings" element={<Navigate to="/market" replace />} />
-            <Route path="*" element={<Navigate to="/market" replace />} />
-          </Routes>
-        </main>
-
-        <div className="lg:hidden">
-          <BottomNav />
-        </div>
-        <SystemFooter />
-      </div>
-    </div>
   );
 }

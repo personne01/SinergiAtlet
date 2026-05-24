@@ -7,6 +7,7 @@ import JobFilters from '../components/jobs/JobFilters';
 import { useJobs } from '../hooks/useJobs';
 import { useSportAssessments, useJobMatches } from '../hooks/useKYSScore';
 import { KYS_ACCESS, SPORT_IDS } from '../data/mock';
+import { useAuth } from '../contexts/AuthContext';
 import type { JobFilter } from '../types';
 
 const SPORT_LABELS: Record<string, string> = {
@@ -17,6 +18,7 @@ const SPORT_LABELS: Record<string, string> = {
 
 export default function MarketPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const jobs = useJobs();
   const assessments = useSportAssessments();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -27,7 +29,6 @@ export default function MarketPage() {
     kysOnly: null,
     location: '',
     sportId: '',
-    levelId: '',
   });
 
   const filteredJobs = useMemo(() => {
@@ -76,12 +77,14 @@ export default function MarketPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate('/club-login')}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-[#D1FF00]/10 border border-[#D1FF00]/20 rounded-lg text-[8px] sm:text-[9px] font-bold text-[#D1FF00] uppercase tracking-wider hover:bg-[#D1FF00]/20 transition-all"
-          >
-            <Plus className="w-3 h-3" /> Posting
-          </button>
+          {user?.role !== 'talent' && (
+            <button
+              onClick={() => navigate('/club-login')}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-[#D1FF00]/10 border border-[#D1FF00]/20 rounded-lg text-[8px] sm:text-[9px] font-bold text-[#D1FF00] uppercase tracking-wider hover:bg-[#D1FF00]/20 transition-all"
+            >
+              <Plus className="w-3 h-3" /> Posting
+            </button>
+          )}
           <select
             value={filter.sportId || ''}
             onChange={(e) => setFilter({ ...filter, sportId: e.target.value })}
@@ -200,17 +203,19 @@ export default function MarketPage() {
         </div>
       )}
 
-      <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-white/5 text-center">
-        <p className="text-[8px] sm:text-[9px] text-white/20 font-mono mb-3 uppercase tracking-wider">
-          Punya lowongan untuk atlet?
-        </p>
-        <button
-          onClick={() => navigate('/club-login')}
-          className="inline-flex items-center gap-2 px-4 sm:px-6 py-3 bg-[#D1FF00]/5 border border-[#D1FF00]/20 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-bold text-[#D1FF00] uppercase tracking-wider hover:bg-[#D1FF00]/10 transition-all"
-        >
-          <Plus className="w-3.5 h-3.5" /> Posting Loker untuk Klub Anda
-        </button>
-      </div>
+      {user?.role !== 'talent' && (
+        <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-white/5 text-center">
+          <p className="text-[8px] sm:text-[9px] text-white/20 font-mono mb-3 uppercase tracking-wider">
+            Punya lowongan untuk atlet?
+          </p>
+          <button
+            onClick={() => navigate('/club-login')}
+            className="inline-flex items-center gap-2 px-4 sm:px-6 py-3 bg-[#D1FF00]/5 border border-[#D1FF00]/20 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-bold text-[#D1FF00] uppercase tracking-wider hover:bg-[#D1FF00]/10 transition-all"
+          >
+            <Plus className="w-3.5 h-3.5" /> Posting Loker untuk Klub Anda
+          </button>
+        </div>
+      )}
     </motion.div>
   );
 }

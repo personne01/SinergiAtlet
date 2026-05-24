@@ -23,7 +23,6 @@ export async function getById(req: Request, res: Response) {
 
     res.json({ data: job });
   } catch (err) {
-    console.error('Error fetching job:', err);
     res.status(500).json({ error: 'Failed to fetch job' });
   }
 }

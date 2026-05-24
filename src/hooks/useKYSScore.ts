@@ -17,7 +17,7 @@ export function computeMatchForJob(jobId: string, assessments: SportAssessment[]
   const job = JOBS.find((j) => j.id === jobId);
   if (!job?.skillRequirements || job.skillRequirements.length === 0 || !job.sportId) return 0;
 
-  const assessment = assessments.find((a) => a.sportId === job.sportId && a.levelId === job.levelId);
+  const assessment = assessments.find((a) => a.sportId === job.sportId);
   if (!assessment || assessment.status !== 'completed') return 0;
 
   let totalWeight = 0;

@@ -1,10 +1,47 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ScanLine, TrendingUp, Camera, BarChart3, ShieldCheck, Award, Zap, Heart, Target, Trophy, Star, Cpu, AlertCircle, RotateCcw } from 'lucide-react';
 import { SPORTS } from '../data/sports';
 import { SPORT_ASSESSMENTS, BADGES_DATA, CERTIFICATIONS, JOBS } from '../data/mock';
 import type { SportAssessment } from '../types';
 import { useMediaPipe } from '../hooks/useMediaPipe';
+import { useAuth } from '../contexts/AuthContext';
+import { api } from '../lib/api';
+
+interface RawAssessmentResponse {
+  id: string;
+  sport_id?: string;
+  sportId?: string;
+  level_id?: string;
+  levelId?: string;
+  status?: 'not_started' | 'in_progress' | 'completed';
+  composite_score?: number | string;
+  compositeScore?: number;
+  dimension_scores?: any[];
+  dimensionScores?: any[];
+  completed_at?: string;
+  completedAt?: string;
+  valid_until?: string;
+  validUntil?: string;
+}
+
+function normalizeAssessment(raw: RawAssessmentResponse): SportAssessment {
+  return {
+    id: raw.id,
+    sportId: raw.sport_id || raw.sportId || '',
+    levelId: raw.level_id || raw.levelId || '',
+    status: raw.status || 'not_started',
+    compositeScore: Number(raw.composite_score ?? raw.compositeScore ?? 0),
+    dimensionScores: raw.dimension_scores || raw.dimensionScores || [],
+    completedAt: raw.completed_at
+      ? new Date(raw.completed_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+      : raw.completedAt,
+    validUntil: raw.valid_until
+      ? new Date(raw.valid_until).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+      : raw.validUntil,
+  };
+}
 import SportSelector from '../components/kys/SportSelector';
 import AssessmentFlow from '../components/kys/AssessmentFlow';
 import SkillRadar from '../components/kys/SkillRadar';
@@ -40,11 +77,60 @@ function BadgeCard({ badge }: { badge: typeof BADGES_DATA[0] }) {
 }
 
 export default function KYSPage() {
+  const [searchParams] = useSearchParams();
+  const querySportId = searchParams.get('sportId');
+  const queryLevelId = searchParams.get('levelId');
+
+  const { user } = useAuth();
   const mp = useMediaPipe();
-  const [selectedSport, setSelectedSport] = useState(SPORTS[0].id);
-  const [selectedLevel, setSelectedLevel] = useState('');
+  
+  const [selectedSport, setSelectedSport] = useState(querySportId || SPORTS[0].id);
   const [showFlow, setShowFlow] = useState(false);
   const [assessments, setAssessments] = useState<SportAssessment[]>(SPORT_ASSESSMENTS);
+
+  // Sync with searchParams in case they change dynamically
+  useEffect(() => {
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) {
+        if (querySportId) {
+          setSelectedSport(querySportId);
+        }
+        if (searchParams.get('start') === 'true') {
+          setShowFlow(true);
+        }
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [querySportId, queryLevelId, searchParams]);
+
+  // Load user assessments from database
+  useEffect(() => {
+    if (!user?.id) return;
+    api.get<any[]>(`/kys/assessments/${user.id}`)
+      .then((data) => {
+        if (data && data.length > 0) {
+          const loaded = data.map(normalizeAssessment);
+          setAssessments((prev) => {
+            const merged = [...prev];
+            for (const l of loaded) {
+              const idx = merged.findIndex((m) => m.sportId === l.sportId && m.levelId === l.levelId);
+              if (idx !== -1) {
+                merged[idx] = l;
+              } else {
+                merged.push(l);
+              }
+            }
+            return merged;
+          });
+        }
+      })
+      .catch(() => {
+        // Silently ignore loading errors to rely on local state
+      });
+  }, [user]);
 
   const sport = SPORTS.find((s) => s.id === selectedSport);
 
@@ -53,23 +139,9 @@ export default function KYSPage() {
     [assessments, selectedSport],
   );
 
-  const activeLevel = useMemo(() => {
-    if (selectedLevel) return selectedLevel;
-    const found = sportAssessments.find((a) => a.status === 'completed');
-    if (found) return found.levelId;
-    const incomplete = sportAssessments.find((a) => a.status === 'not_started');
-    if (incomplete) return incomplete.levelId;
-    return sport?.levels[0]?.id || '';
-  }, [selectedLevel, sportAssessments, sport]);
-
   const currentAssessment = useMemo(
-    () => sportAssessments.find((a) => a.levelId === activeLevel),
-    [sportAssessments, activeLevel],
-  );
-
-  const sportLevel = useMemo(
-    () => (sport ? sport.levels.find((l) => l.id === activeLevel) : undefined),
-    [sport, activeLevel],
+    () => sportAssessments[0],
+    [sportAssessments],
   );
 
   const getSportStatus = (id: string) => {
@@ -108,6 +180,21 @@ export default function KYSPage() {
   };
 
   const handleComplete = (assessment: SportAssessment) => {
+    if (user?.id) {
+      api.post(`/kys/assessments/${user.id}`, {
+        sportId: assessment.sportId,
+        levelId: assessment.levelId,
+        compositeScore: assessment.compositeScore,
+        dimensionScores: assessment.dimensionScores,
+      })
+      .then(() => {
+        console.log('Successfully saved completed assessment to DB');
+      })
+      .catch((err) => {
+        console.error('Failed to save assessment to DB:', err);
+      });
+    }
+
     setAssessments((prev) => {
       const filtered = prev.filter((a) => !(a.sportId === assessment.sportId && a.levelId === assessment.levelId));
       return [...filtered, assessment];
@@ -133,7 +220,7 @@ export default function KYSPage() {
       <SportSelector
         sports={SPORTS}
         selected={selectedSport}
-        onSelect={(id) => { setSelectedSport(id); setSelectedLevel(''); setShowFlow(false); }}
+        onSelect={(id) => { setSelectedSport(id); setShowFlow(false); }}
         getSportStatus={getSportStatus}
         getSportScore={getSportScore}
       />
@@ -163,42 +250,18 @@ export default function KYSPage() {
       )}
 
       <div className="mt-4 sm:mt-6">
-        {showFlow && sportLevel ? (
+        {showFlow && sport ? (
           <AssessmentFlow
-            dimensions={sportLevel.dimensions}
+            key={selectedSport}
+            dimensions={sport.dimensions}
             sportId={selectedSport}
-            levelId={activeLevel}
             mediapipeReady={mp.ready}
             onComplete={handleComplete}
             onClose={() => setShowFlow(false)}
           />
         ) : (
           <div className="space-y-4 sm:space-y-6">
-            {/* Level selector + assessment CTA */}
-            {sport && sport.levels.length > 1 && (
-              <div className="flex flex-wrap gap-2">
-                {sport.levels.map((lvl) => {
-                  const lvlAssessment = sportAssessments.find((a) => a.levelId === lvl.id);
-                  const isActive = activeLevel === lvl.id;
-                  return (
-                    <button
-                      key={lvl.id}
-                      onClick={() => setSelectedLevel(lvl.id)}
-                      className={`px-3 py-2 rounded-lg border text-[8px] sm:text-[9px] font-bold uppercase tracking-wider transition-all ${
-                        isActive
-                          ? 'bg-[#D1FF00]/10 border-[#D1FF00]/30 text-[#D1FF00]'
-                          : 'bg-white/5 border-white/10 text-white/40 hover:text-white/60'
-                      }`}
-                    >
-                      {lvl.label}
-                      {lvlAssessment?.status === 'completed' && <span className="ml-1 text-[#D1FF00]">✓</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Per-level dashboard */}
+            {/* Per-sport dashboard */}
             {currentAssessment?.status === 'completed' ? (
               <div className="bg-gradient-to-br from-[#111111] to-[#0d0d0d] border border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 relative overflow-hidden">
                 <div className="absolute -top-20 -right-20 w-40 h-40 sm:w-56 sm:h-56 bg-[#D1FF00]/5 blur-3xl rounded-full" />
@@ -211,7 +274,7 @@ export default function KYSPage() {
                       </div>
                       <div>
                         <h3 className="text-[10px] sm:text-xs lg:text-sm font-bold uppercase tracking-widest italic leading-tight">
-                          {sport?.name} — <span className="text-[#D1FF00]">{sportLevel?.label}</span>
+                          {sport?.name}
                         </h3>
                         <p className="text-[7px] sm:text-[8px] text-white/20 font-mono">
                           Completed {currentAssessment.completedAt} · Valid until {currentAssessment.validUntil}
@@ -234,7 +297,7 @@ export default function KYSPage() {
                     />
                     <div className="flex-1 w-full space-y-3">
                       {activeDimScores.map((ds) => {
-                        const dimDef = sportLevel?.dimensions.find((d) => d.id === ds.dimensionId);
+                        const dimDef = sport?.dimensions.find((d) => d.id === ds.dimensionId);
                         const DimIcon = dimDef ? ICON_MAP[dimDef.icon] || ShieldCheck : ShieldCheck;
                         return (
                           <div key={ds.dimensionId} className="bg-white/5 p-3 rounded-xl border border-white/5">
@@ -288,12 +351,12 @@ export default function KYSPage() {
                   <ScanLine className="w-6 h-6 text-white/20" />
                 </div>
                 <h3 className="text-sm sm:text-base font-bold text-white mb-1">
-                  {sportLevel ? `Assessment ${sport.name} — ${sportLevel.label}` : 'Pilih Level'}
+                  {sport ? `Assessment ${sport.name}` : 'Pilih Cabang Olahraga'}
                 </h3>
                 <p className="text-[9px] sm:text-[10px] text-white/40 max-w-xs mx-auto mb-6">
-                  Pilih level di atas, lalu lakukan assessment untuk mengukur skill-mu dan cocokkan dengan kebutuhan klub.
+                  Lakukan assessment untuk mengukur skill-mu dan cocokkan dengan kebutuhan klub.
                 </p>
-                {sportLevel && (
+                {sport && (
                   <button
                     onClick={() => setShowFlow(true)}
                     className="py-3 px-6 bg-[#D1FF00] text-black font-black uppercase tracking-[0.15em] text-[9px] sm:text-[10px] rounded-xl sm:rounded-2xl shadow-[0_0_20px_rgba(209,255,0,0.2)] hover:shadow-[0_0_30px_rgba(209,255,0,0.3)] transition-all"
@@ -305,17 +368,7 @@ export default function KYSPage() {
             )}
 
             {/* Stats row — always visible */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="bg-[#0a0a0a] border border-white/5 rounded-xl sm:rounded-2xl p-3 sm:p-4">
-                <div className="flex items-center gap-2 text-white/40 mb-2">
-                  <ScanLine className="w-3.5 h-3.5 text-[#D1FF00]" />
-                  <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-widest">Level Assessed</span>
-                </div>
-                <p className="text-xs sm:text-sm font-bold text-white">
-                  {sportAssessments.filter((a) => a.status === 'completed').length}/{sport?.levels.length || 0}
-                </p>
-                <p className="text-[8px] sm:text-[9px] text-white/30 font-mono">{sport?.name || '-'}</p>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <div className="bg-[#0a0a0a] border border-white/5 rounded-xl sm:rounded-2xl p-3 sm:p-4">
                 <div className="flex items-center gap-2 text-white/40 mb-2">
                   <TrendingUp className="w-3.5 h-3.5 text-[#D1FF00]" />

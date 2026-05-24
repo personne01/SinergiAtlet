@@ -23,7 +23,7 @@ export default function JobFilters({ filter, onChange, onClose, totalJobs }: Job
   };
 
   const clearAll = () => {
-    onChange({ types: [], kysOnly: null, location: '' });
+    onChange({ types: [], kysOnly: null, location: '', sportId: '' });
   };
 
   const hasActive = filter.types.length > 0 || filter.kysOnly !== null;

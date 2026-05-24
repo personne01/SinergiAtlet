@@ -22,7 +22,7 @@ app.use('/api/career', careerRouter);
 app.use('/api/kys', kysRouter);
 app.use('/api/auth', authRouter);
 
-app.use(notFound);
+app.use('/api/*', notFound);
 app.use(errorHandler);
 
 export default app;

@@ -20,14 +20,14 @@ export async function getAssessments(req: Request, res: Response) {
 export async function upsertAssessment(req: Request, res: Response) {
   try {
     const { athleteId } = req.params;
-    const { sportId, levelId, compositeScore, dimensionScores } = req.body;
+    const { sportId, compositeScore, dimensionScores } = req.body;
 
-    if (!sportId || !levelId) {
-      res.status(400).json({ error: 'sportId and levelId are required' });
+    if (!sportId) {
+      res.status(400).json({ error: 'sportId is required' });
       return;
     }
 
-    const data = await kysService.upsertAssessment(athleteId, sportId, levelId, compositeScore, dimensionScores);
+    const data = await kysService.upsertAssessment(athleteId, sportId, compositeScore, dimensionScores);
     res.status(201).json({ data });
   } catch (err) {
     console.error('Error creating sport assessment:', err);

@@ -1,6 +1,4 @@
-const BASE_URL = import.meta.env.PROD
-  ? import.meta.env.VITE_API_URL || '/api'
-  : '/api';
+const BASE_URL = '/api';
 
 interface ApiResponse<T> {
   data: T;
@@ -28,7 +26,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
   });
 
-  if (res.status === 401) {
+  if (res.status === 401 && !path.startsWith('/auth/login') && !path.startsWith('/auth/register')) {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
     window.location.href = '/login';

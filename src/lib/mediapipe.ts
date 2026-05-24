@@ -1,9 +1,5 @@
 import type { LandmarkFrame } from '../types';
-
-interface MediaPipeLoader {
-  PoseLandmarker: typeof import('@mediapipe/tasks-vision').PoseLandmarker;
-  FilesetResolver: typeof import('@mediapipe/tasks-vision').FilesetResolver;
-}
+import { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
 
 type ProgressCallback = (progress: number, status: string) => void;
 
@@ -11,7 +7,7 @@ const WASM_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/w
 const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task';
 
 export class MediaPipeEngine {
-  private poseLandmarker: import('@mediapipe/tasks-vision').PoseLandmarker | null = null;
+  private landmarker: PoseLandmarker | null = null;
   private loading = false;
   private loaded = false;
   private onProgress: ProgressCallback = () => {};
@@ -21,31 +17,45 @@ export class MediaPipeEngine {
   }
 
   async load() {
-    if (this.loaded) return;
-    if (this.loading) return;
+    if (this.loaded) return Promise.resolve(true);
+    if (this.loading) {
+      // wait until loaded
+      return new Promise((resolve) => {
+        const interval = setInterval(() => {
+          if (this.loaded) {
+            clearInterval(interval);
+            resolve(true);
+          }
+        }, 100);
+      });
+    }
     this.loading = true;
 
-    this.onProgress(5, 'Mengunduh runtime MediaPipe...');
-    const MP = await this.getMediaPipe();
+    try {
+      this.onProgress(30, 'Menginisialisasi pose detector...');
+      const vision = await FilesetResolver.forVisionTasks(WASM_CDN);
+      this.onProgress(50, 'Memuat model pose landmarker (~8MB)...');
+      
+      this.landmarker = await PoseLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: MODEL_URL,
+          delegate: 'GPU',
+        },
+        runningMode: 'VIDEO',
+        minPoseDetectionConfidence: 0.5,
+        minPosePresenceConfidence: 0.5,
+        minTrackingConfidence: 0.5,
+      });
 
-    this.onProgress(30, 'Menginisialisasi pose detector...');
-    const vision = await MP.FilesetResolver.forVisionTasks(WASM_CDN);
-
-    this.onProgress(50, 'Memuat model pose landmarker (~8MB)...');
-    this.poseLandmarker = await MP.PoseLandmarker.createFromOptions(vision, {
-      baseOptions: {
-        modelAssetPath: MODEL_URL,
-        delegate: 'GPU',
-      },
-      runningMode: 'VIDEO',
-      minPoseDetectionConfidence: 0.5,
-      minPosePresenceConfidence: 0.5,
-      minTrackingConfidence: 0.5,
-    });
-
-    this.loaded = true;
-    this.loading = false;
-    this.onProgress(100, 'Siap!');
+      this.onProgress(100, 'Siap!');
+      this.loaded = true;
+      this.loading = false;
+      return true;
+    } catch (err) {
+      this.loading = false;
+      console.error("Failed to load MediaPipe:", err);
+      throw err;
+    }
   }
 
   get isLoaded() {
@@ -58,9 +68,9 @@ export class MediaPipeEngine {
 
   async analyzeVideo(
     videoBlob: Blob,
-    frameIntervalSec = 1,
+    targetFps = 15,
   ): Promise<{ frames: LandmarkFrame[]; confidence: number }> {
-    if (!this.poseLandmarker) throw new Error('MediaPipe not loaded');
+    if (!this.landmarker) throw new Error('MediaPipe landmarker not loaded');
 
     const url = URL.createObjectURL(videoBlob);
     const video = document.createElement('video');
@@ -76,9 +86,11 @@ export class MediaPipeEngine {
 
     const duration = video.duration;
     const frames: LandmarkFrame[] = [];
-    const maxFrames = Math.min(Math.ceil(duration / frameIntervalSec), 60);
+    const frameIntervalSec = 1 / targetFps;
+    const maxFrames = Math.min(Math.ceil(duration / frameIntervalSec), 30 * 30); // max 30 seconds at 30 fps
+
     const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) throw new Error('Canvas not available');
 
     const width = video.videoWidth || 640;
@@ -88,6 +100,8 @@ export class MediaPipeEngine {
 
     for (let i = 0; i < maxFrames; i++) {
       const time = i * frameIntervalSec;
+      if (time > duration) break;
+
       video.currentTime = time;
       await new Promise<void>((resolve) => {
         const onSeeked = () => {
@@ -95,29 +109,35 @@ export class MediaPipeEngine {
           resolve();
         };
         video.addEventListener('seeked', onSeeked);
-        setTimeout(resolve, 2000);
+        setTimeout(resolve, 2000); // timeout fallback
       });
 
       ctx.clearRect(0, 0, width, height);
       ctx.drawImage(video, 0, 0, width, height);
 
-      const timestamp = i * 1000;
-      const result = this.poseLandmarker!.detectForVideo(canvas, timestamp);
-
+      const timestamp = i * (1000 / targetFps);
+      
+      const result = this.landmarker.detectForVideo(canvas, timestamp);
+      
       if (result.landmarks && result.landmarks.length > 0) {
-        const personLandmarks = result.landmarks[0].map((lm: { x: number; y: number; z: number; visibility?: number }) => ({
+        const frameLandmarks = result.landmarks[0].map((lm) => ({
           x: lm.x,
           y: lm.y,
           z: lm.z,
           visibility: lm.visibility ?? 1,
         }));
-        frames.push({ timestamp, landmarks: personLandmarks });
+        frames.push({ timestamp, landmarks: frameLandmarks });
       }
 
       this.onProgress(
         Math.round(50 + (i / maxFrames) * 45),
         `Menganalisis frame ${i + 1}/${maxFrames}...`,
       );
+
+      // Yield to main thread briefly to prevent UI freeze and allow progress bar update
+      if (i % 3 === 0) {
+        await new Promise(r => setTimeout(r, 0));
+      }
     }
 
     URL.revokeObjectURL(url);
@@ -133,18 +153,28 @@ export class MediaPipeEngine {
     return { frames, confidence: Math.round(avgConfidence * 100) };
   }
 
-  private async getMediaPipe(): Promise<MediaPipeLoader> {
-    const MP = await import('@mediapipe/tasks-vision');
-    return {
-      PoseLandmarker: MP.PoseLandmarker,
-      FilesetResolver: MP.FilesetResolver,
-    };
+  async validateLiveFrame(canvas: HTMLCanvasElement, timestamp: number) {
+    if (!this.landmarker) return null;
+    try {
+      const result = this.landmarker.detectForVideo(canvas, timestamp);
+      if (result.landmarks && result.landmarks.length > 0) {
+        return result.landmarks[0].map(lm => ({
+          x: lm.x,
+          y: lm.y,
+          z: lm.z,
+          visibility: lm.visibility ?? 1,
+        }));
+      }
+    } catch (e) {
+        console.error("Live validation error:", e);
+    }
+    return null;
   }
 
   dispose() {
-    if (this.poseLandmarker) {
-      this.poseLandmarker.close();
-      this.poseLandmarker = null;
+    if (this.landmarker) {
+      this.landmarker.close();
+      this.landmarker = null;
     }
     this.loaded = false;
     this.loading = false;

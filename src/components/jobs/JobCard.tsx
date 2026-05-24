@@ -59,10 +59,30 @@ export default function JobCard({ job, variant = 'default', kysVerified = false,
           <MapPin className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
           <span className="truncate">{job.location}</span>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2 text-white/60 text-[9px] sm:text-[10px] lg:text-xs">
-          <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#D1FF00] shrink-0" />
-          Kriteria:{' '}
-          <span className="text-[#D1FF00] truncate">{job.criteria}</span>
+        <div className="flex items-start gap-1.5 sm:gap-2 text-white/60 text-[9px] sm:text-[10px] lg:text-xs">
+          <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#D1FF00] shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <span className="text-white/40">Kriteria:</span>{' '}
+            <span className="text-[#D1FF00]">
+              {job.criteria || (job.isKYSRequired ? 'KYS Minimum Diperlukan' : 'Evaluasi Umum')}
+            </span>
+            
+            {job.isKYSRequired && (
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {job.skillRequirements && job.skillRequirements.length > 0 ? (
+                  job.skillRequirements.map(req => (
+                    <span key={req.dimensionId} className="bg-[#D1FF00]/10 border border-[#D1FF00]/30 text-[#D1FF00] px-1.5 py-0.5 rounded text-[7px] sm:text-[8px] uppercase tracking-wider font-bold">
+                      {req.dimensionName}: Min {req.minScore}
+                    </span>
+                  ))
+                ) : job.criteriaValue !== undefined ? (
+                  <span className="bg-[#D1FF00]/10 border border-[#D1FF00]/30 text-[#D1FF00] px-1.5 py-0.5 rounded text-[7px] sm:text-[8px] uppercase tracking-wider font-bold">
+                    Min Skor {job.criteriaType ? job.criteriaType.replace('kys_', '').toUpperCase() : 'AVG'}: {job.criteriaValue}
+                  </span>
+                ) : null}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

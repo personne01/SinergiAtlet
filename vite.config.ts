@@ -1,34 +1,20 @@
-/// <reference types="vitest" />
-import tailwindcss from '@tailwindcss/vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, '.', '');
-  return {
-    plugins: [react(), tailwindcss()],
-    define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+export default defineConfig({
+  plugins: [
+    react(),
+    tailwindcss(),
+  ],
+  resolve: {
+    alias: {
+      '@': path.resolve(process.cwd(), './src'),
     },
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, './src'),
-      },
-    },
-    server: {
-      hmr: process.env.DISABLE_HMR !== 'true',
-      proxy: {
-        '/api': {
-          target: 'http://localhost:4000',
-          changeOrigin: true,
-        },
-      },
-    },
-    test: {
-      globals: true,
-      environment: 'jsdom',
-      setupFiles: './src/__tests__/setup.ts',
-    },
-  };
+  },
+  server: {
+    port: 3000,
+    host: '0.0.0.0',
+  },
 });

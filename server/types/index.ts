@@ -51,6 +51,7 @@ export interface Job {
   salary_range?: string;
   deadline?: string;
   created_at: string;
+  sport_id?: string;
 }
 
 export interface CareerProgress {
